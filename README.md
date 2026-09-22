@@ -13,6 +13,17 @@ runs nixOS (via [orbstack](https://orbstack.dev)), and it's configured with
 ```nix
 nix.settings.experimental-features = [ "nix-command" "flakes" ];
 programs.git.enable = true;
+
+# Linux and POSIX manual pages (not required for running the project, but useful
+# for development)
+documentation.dev.enable = true;
+environment.systemPackages = with pkgs; [ man-pages man-pages-posix ];
+
+# Setup a tun device so that the network stack can send and receive Ethernet
+# frames.
+networking.interfaces.tap0.virtual = true;
+networking.interfaces.tap0.virtualType = "tap";
+networking.interfaces.tap0.virtualOwner = "your-username";
 ```
 The flake is then run with `nix develop`.
 

@@ -52,7 +52,10 @@ int AddressResolutionModule::handle_incoming_arp(eth_header *eth_hdr,
 
   // Swap hardware and protocol fields, putting the local hardware and protocol
   // addresses in the sender fields.
-  std::swap(arp_data->sip, arp_data->dip);
+  uint16_t tmp = arp_data->sip; // cannot use std::swap, as sip and dip are
+                                // misaligned (the arp_header struct is packed).
+  arp_data->sip = arp_data->dip;
+  arp_data->dip = tmp;
   std::swap(arp_data->smac, arp_data->dmac);
 
   // Set the ar$op field to ares_op$REPLY.

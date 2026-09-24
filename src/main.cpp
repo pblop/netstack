@@ -1,17 +1,11 @@
 #include <linux/if.h>
+#include <linux/if_ether.h>
 #include <linux/if_tun.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <linux/if_ether.h>
 
 #include "ether.hpp"
 #include "tap.hpp"
-
-void eth_addr_to_str(const uint8_t *addr, char *str, size_t str_size) {
-  // high byte first, ethernet order.
-  snprintf(str, str_size, "%02x:%02x:%02x:%02x:%02x:%02x",
-           addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-}
 
 int main(int argc, char *argv[]) {
   TapDevice tap;
@@ -24,7 +18,7 @@ int main(int argc, char *argv[]) {
   printf("TAP device name: %s\n", tap.ifname);
 
   if (tap.configure_iface(sinet_addr("192.168.234.2"),
-                      sinet_addr("255.255.255.0")) < 0) {
+                          sinet_addr("255.255.255.0")) < 0) {
     fprintf(stderr, "Couldn't configure the TUN interface.\n");
     tap.close();
     return 1;
@@ -40,11 +34,12 @@ int main(int argc, char *argv[]) {
     if ((err = tap.read(buf, sizeof(buf))) < 0) {
       fprintf(stderr, "Error reading from TAP device: %d\n", err);
     }
-    struct eth_header *hdr = (struct eth_header *)buf;
-    eth_addr_to_str(hdr->saddr, src_str, sizeof(src_str));
-    eth_addr_to_str(hdr->daddr, dest_str, sizeof(dest_str));
+    auto *hdr = eth_header::from_buffer(buf);
+    hdr->saddr_to_str(src_str, sizeof(src_str));
+    hdr->daddr_to_str(dest_str, sizeof(dest_str));
 
-    printf("(%lu) %s -> %s. Type: %d\n", sizeof(buf), src_str, dest_str, hdr->type_len);
+    printf("(%lub) %s -> %s. %s: %d\n", sizeof(buf), src_str, dest_str,
+           hdr->is_type() ? "Type" : "Length", hdr->type_len);
     fflush(stdout);
   }
 

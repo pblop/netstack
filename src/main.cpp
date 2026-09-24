@@ -7,12 +7,10 @@
 
 int main(int argc, char *argv[]) {
   char ifname[IFNAMSIZ];
-  short tuntap_flags =
-      IFF_TAP | IFF_NO_PI; // TAP device without packet information
 
   char *requested_ifname = argc > 1 ? argv[1] : NULL;
 
-  int tuntap_fd = tuntap_connect(requested_ifname, tuntap_flags, ifname);
+  int tuntap_fd = tuntap_connect(requested_ifname, ifname);
   if (tuntap_fd < 0) {
     fprintf(stderr, "Couldn't create TAP device\n");
     return 1;

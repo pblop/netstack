@@ -13,7 +13,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-int tuntap_connect(char *ifname, short flags, char *ifname_out);
+int tuntap_connect(char *ifname, char *ifname_out);
 
 int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask);
 

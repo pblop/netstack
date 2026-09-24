@@ -1,6 +1,6 @@
 #include "tap.hpp"
 
-int tuntap_connect(char *ifname, short flags, char *ifname_out) {
+int tuntap_connect(char *ifname, char *ifname_out) {
   int tuntap_fd;
   struct ifreq ifr;
 
@@ -12,7 +12,7 @@ int tuntap_connect(char *ifname, short flags, char *ifname_out) {
 
   // Configure the TAP device
   memset(&ifr, 0, sizeof(ifr));
-  ifr.ifr_flags = flags;
+  ifr.ifr_flags = IFF_TAP | IFF_NO_PI; // TAP device without packet information
   if (ifname != NULL) {
     strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
   }

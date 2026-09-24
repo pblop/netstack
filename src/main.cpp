@@ -41,9 +41,8 @@ int main(int argc, char *argv[]) {
   }
   printf("TAP device name: %s\n", tap.ifname);
 
-  if (tap.configure_iface(sinet_addr("192.168.234.2"),
-                          sinet_addr("255.255.255.0")) < 0) {
-    fprintf(stderr, "Couldn't configure the TUN interface.\n");
+  if (tap.up_iface() < 0) {
+    fprintf(stderr, "Couldn't bring the TAP interface up.\n");
     tap.close();
     return 1;
   }

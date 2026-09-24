@@ -20,6 +20,9 @@ struct TapDevice {
   int connect(char *ifname);
   int read(uint8_t *buf, size_t len);
 
+  // like configure_iface but only brings the interface up without configuring
+  // the IP address and netmask.
+  int up_iface();
   int configure_iface(in_addr_t addr, in_addr_t netmask);
   int close();
 };

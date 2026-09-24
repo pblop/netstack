@@ -49,6 +49,44 @@ int TapDevice::connect(char *ifname_in) {
   return tuntap_fd;
 }
 
+int TapDevice::up_iface() {
+  int sock_fd;
+  struct ifreq ifr;
+
+  // Create a channel into the NET kernel
+  sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (sock_fd < 0) {
+    perror("Failed to create configuration socket");
+    return -1;
+  }
+
+  // Prepare the ifreq structure with the interface name (to set interface
+  // values).
+  memset(&ifr, 0, sizeof(ifr));
+  strncpy(ifr.ifr_name, this->ifname, IFNAMSIZ);
+  
+  // Bring the interface up.
+  if (ioctl(sock_fd, SIOCGIFFLAGS, &ifr) < 0) {
+    perror("Failed to get interface flags");
+    ::close(sock_fd);
+    return -1;
+  }
+  // If the interface is not up and running, we need to set the flags to bring
+  // it up.
+  if (!(ifr.ifr_flags & IFF_UP && ifr.ifr_flags & IFF_RUNNING)) {
+    ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+
+    if (ioctl(sock_fd, SIOCSIFFLAGS, &ifr) < 0) {
+      perror("Failed to set interface flags");
+      ::close(sock_fd);
+      return -1;
+    }
+  }
+
+  ::close(sock_fd);
+  return 0;
+}
+
 // This doesn't use Netlink on purpose. That API is a bit more complex, and I'm
 // just looking for a simple way to set an IP address on the interface.
 int TapDevice::configure_iface(in_addr_t addr, in_addr_t netmask) {

@@ -13,10 +13,17 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-int tap_connect(char *ifname, char *ifname_out);
-int tap_read(uint8_t *buf, size_t len);
+struct TapDevice {
+  int fd = -1;
+  char ifname[IFNAMSIZ];
 
-int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask);
+  int connect(char *ifname);
+  int read(uint8_t *buf, size_t len);
+
+  int configure_iface(in_addr_t addr, in_addr_t netmask);
+  int close();
+};
+
 
 // s-afer inet_addr.
 in_addr_t sinet_addr(const char *ip_str);

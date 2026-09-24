@@ -1,6 +1,6 @@
 #include "tap.hpp"
 
-int tap_connect(char *ifname, char *ifname_out) {
+int TapDevice::connect(char *ifname_in) {
   int tuntap_fd;
   struct ifreq ifr;
 
@@ -13,7 +13,7 @@ int tap_connect(char *ifname, char *ifname_out) {
   // Configure the TAP device
   memset(&ifr, 0, sizeof(ifr));
   ifr.ifr_flags = IFF_TAP | IFF_NO_PI; // TAP device without packet information
-  if (ifname != NULL) {
+  if (ifname_in != NULL) {
     strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
   }
 
@@ -24,9 +24,9 @@ int tap_connect(char *ifname, char *ifname_out) {
       // the user hasn't created any other TAP devices and is trying
       // to use that default name. But we can't be sure. Thus, the info
       // message below might be wrong.
-      const char *dev = ifname != NULL ? ifname : "tap0";
+      const char *dev = ifname_in != NULL ? ifname_in : "tap0";
       perror("Failed to configure TUN device");
-      if (ifname == NULL) {
+      if (ifname_in == NULL) {
         fprintf(stderr, "Couldn't create a TUN device. You may need to specify "
                         "a device name as the first argument.\n");
       } else {
@@ -40,19 +40,18 @@ int tap_connect(char *ifname, char *ifname_out) {
       perror("Failed to configure TUN device");
     }
 
-    close(tuntap_fd);
+    this->close();
     return -1;
   }
 
-  if (ifname_out != NULL) {
-    strncpy(ifname_out, ifr.ifr_name, IFNAMSIZ);
-  }
+  strncpy(this->ifname, ifr.ifr_name, IFNAMSIZ);
+  this->fd = tuntap_fd;
   return tuntap_fd;
 }
 
 // This doesn't use Netlink on purpose. That API is a bit more complex, and I'm
 // just looking for a simple way to set an IP address on the interface.
-int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask) {
+int TapDevice::configure_iface(in_addr_t addr, in_addr_t netmask) {
   int sock_fd;
   struct ifreq ifr;
   struct sockaddr_in sai;
@@ -72,12 +71,12 @@ int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask) {
   // root). So we need to prepare the ifreq structure to read the interface
   // values onto it.
   memset(&ifr_read, 0, sizeof(ifr_read));
-  strncpy(ifr_read.ifr_name, ifname, IFNAMSIZ);
+  strncpy(ifr_read.ifr_name, this->ifname, IFNAMSIZ);
 
   // Prepare the ifreq structure with the interface name (to set interface
   // values).
   memset(&ifr, 0, sizeof(ifr));
-  strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+  strncpy(ifr.ifr_name, this->ifname, IFNAMSIZ);
 
   // Get the current IP address of the interface to check if it matches the
   // desired address.
@@ -87,7 +86,7 @@ int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask) {
   if (ioctl(sock_fd, SIOCGIFADDR, &ifr_read) < 0) {
     if (errno != EADDRNOTAVAIL) {
       perror("Failed to get interface address");
-      close(sock_fd);
+      ::close(sock_fd);
       return -1;
     }
     has_addr = false;
@@ -107,14 +106,14 @@ int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask) {
     memcpy(&ifr.ifr_addr, &sai, sizeof(sai));
     if (ioctl(sock_fd, SIOCSIFADDR, &ifr) < 0) {
       perror("Failed to set IP address");
-      close(sock_fd);
+      ::close(sock_fd);
       return -1;
     }
   }
 
   if (ioctl(sock_fd, SIOCGIFNETMASK, &ifr_read) < 0) {
     perror("Failed to get interface netmask");
-    close(sock_fd);
+    ::close(sock_fd);
     return -1;
   }
   // no need to reinterpret_cast here, since we already did it above and
@@ -128,7 +127,7 @@ int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask) {
     memcpy(&ifr.ifr_netmask, &sai, sizeof(sai));
     if (ioctl(sock_fd, SIOCSIFNETMASK, &ifr) < 0) {
       perror("Failed to set netmask");
-      close(sock_fd);
+      ::close(sock_fd);
       return -1;
     }
   }
@@ -136,7 +135,7 @@ int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask) {
   // Bring the interface up.
   if (ioctl(sock_fd, SIOCGIFFLAGS, &ifr) < 0) {
     perror("Failed to get interface flags");
-    close(sock_fd);
+    ::close(sock_fd);
     return -1;
   }
   // If the interface is not up and running, we need to set the flags to bring
@@ -146,12 +145,12 @@ int configure_iface(char *ifname, in_addr_t addr, in_addr_t netmask) {
 
     if (ioctl(sock_fd, SIOCSIFFLAGS, &ifr) < 0) {
       perror("Failed to set interface flags");
-      close(sock_fd);
+      ::close(sock_fd);
       return -1;
     }
   }
 
-  close(sock_fd);
+  ::close(sock_fd);
   return 0;
 }
 
@@ -167,6 +166,23 @@ in_addr_t sinet_addr(const char *ip_str) {
   return addr.s_addr;
 }
 
-int tap_read(int fd, uint8_t *buf, size_t len) {
+int TapDevice::read(uint8_t *buf, size_t len) {
+  int bytes_read = ::read(fd, buf, len);
+  if (bytes_read < 0) {
+    perror("Failed to read from TAP device");
+    return -1;
+  }
+  return bytes_read;
+}
 
+int TapDevice::close() {
+  if (fd >= 0) {
+    int ret = ::close(fd);
+    if (ret < 0) {
+      perror("Failed to close TAP device");
+      return -1;
+    }
+    fd = -1;
+  }
+  return 0;
 }

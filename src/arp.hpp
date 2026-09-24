@@ -1,55 +1,88 @@
 #pragma once
+#include "ether.hpp"
+#include "netdevice.hpp"
 #include <array>
 #include <cstdint>
 #include <cstdio>
 #include <linux/if_arp.h>
 #include <netinet/in.h>
+#include <unordered_map>
 
 struct arp_header {
-  uint16_t ar_hrd; // hardware address space
-  uint16_t ar_pro; // protocol address space
-  uint8_t ar_hln;  // byte length of each hardware address
-  uint8_t ar_pln;  // byte length of each protocol address
-  uint16_t ar_op;  // opcode
+  uint16_t hwtype;  // hardware address space
+  uint16_t protype; // protocol address space
+  uint8_t hwsize;   // byte length of each hardware address
+  uint8_t prosize;  // byte length of each protocol address
+  uint16_t opcode;  // opcode
+  uint8_t data[];
 
   // a bunch other fields (ar_sha, ar_spa, ar_tha, ar_tpa) follow,
   // but they're variable length and they're not yet needed.
 
   static arp_header *from_buffer(uint8_t *buf) {
     auto *hdr = reinterpret_cast<arp_header *>(buf);
-    hdr->ar_hrd = ntohs(hdr->ar_hrd);
-    hdr->ar_pro = ntohs(hdr->ar_pro);
-    hdr->ar_op = ntohs(hdr->ar_op);
+    hdr->hwtype = ntohs(hdr->hwtype);
+    hdr->protype = ntohs(hdr->protype);
+    hdr->opcode = ntohs(hdr->opcode);
     return hdr;
   }
   std::array<char, 18> hrd_to_str() const {
-    switch (ar_hrd) {
+    switch (hwtype) {
     case ARPHRD_ETHER:
       return {"ETHER"};
     default:
       std::array<char, 18> buf;
-      snprintf(buf.data(), sizeof(buf), "%d", ar_hrd);
+      snprintf(buf.data(), sizeof(buf), "%d", hwtype);
       return buf;
     }
   }
   std::array<char, 18> pro_to_str() const {
-    switch (ar_pro) {
-    default:
+    if (hwtype == ARPHRD_ETHER) {
+      switch (protype) {
+      case ETH_P_IP:
+        return {"IPv4"};
+      case ETH_P_IPV6:
+        return {"IPv6"};
+      default:
+        std::array<char, 18> buf;
+        snprintf(buf.data(), sizeof(buf), "%d", hwtype);
+        return buf;
+      }
+    } else {
       std::array<char, 18> buf;
-      snprintf(buf.data(), sizeof(buf), "%d", ar_hrd);
+      snprintf(buf.data(), sizeof(buf), "%d", hwtype);
       return buf;
     }
   }
   std::array<char, 18> op_to_str() const {
-    switch (ar_op) {
+    switch (opcode) {
     case ARPOP_REQUEST:
       return {"REQUEST"};
     case ARPOP_REPLY:
       return {"REPLY"};
     default:
       std::array<char, 18> buf;
-      snprintf(buf.data(), sizeof(buf), "%d", ar_hrd);
+      snprintf(buf.data(), sizeof(buf), "%d", hwtype);
       return buf;
     }
   }
+} __attribute__((packed)); // tell clang to not add padding to the struct, so it
+                           // matches the actual arp header layout in memory.
+
+struct arp_ipv4 {
+  unsigned char smac[6];
+  uint32_t sip;
+  unsigned char dmac[6];
+  uint32_t dip;
+} __attribute__((packed));
+
+struct AddressResolutionModule {
+  // Instead of having a <<protocol type, sender protocol address>, sender
+  // hardware address> table, where the sender protocol address would vary in
+  // size between protocols, I'll have one table per protocol.
+
+  // the translation table for ipv4 <sender prot addr, sender hw addr>
+  std::unordered_map<uint32_t, std::array<uint8_t, 6>> translation_table_ipv4;
+
+  int handle_incoming_arp(eth_header *eth_hdr, size_t len, netdevice *netdev);
 };

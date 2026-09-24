@@ -6,7 +6,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(netstack)
 target_sources(netstack PRIVATE src/main.cpp src/tap.cpp src/ether.cpp src/arp.cpp
-               PRIVATE FILE_SET HEADERS BASE_DIRS src FILES src/tap.hpp src/ether.hpp src/arp.hpp)
+               PRIVATE FILE_SET HEADERS BASE_DIRS src FILES src/tap.hpp
+               src/ether.hpp src/arp.hpp src/netdevice.hpp)
 
 target_compile_options(netstack PRIVATE -Wall -Wextra -fsanitize=address,undefined)
 target_link_options(netstack PRIVATE -fsanitize=address,undefined)

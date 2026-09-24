@@ -6,10 +6,14 @@
 
 #include "arp.hpp"
 #include "ether.hpp"
+#include "netdevice.hpp"
 #include "tap.hpp"
 
 void handle_eth_frame(eth_header *hdr, size_t len);
 void handle_arp_packet(arp_header *hdr, size_t len);
+
+AddressResolutionModule arp_module;
+netdevice netdev;
 
 void handle_eth_frame(eth_header *hdr, size_t len) {
   char src_str[18], dest_str[18];
@@ -21,8 +25,7 @@ void handle_eth_frame(eth_header *hdr, size_t len) {
     switch (hdr->type_len) {
     case ETH_P_ARP: {
       printf("  Type: ARP\n");
-      auto *arp_hdr = arp_header::from_buffer(hdr->payload);
-      handle_arp_packet(arp_hdr, len - sizeof(eth_header));
+      arp_module.handle_incoming_arp(hdr, len - sizeof(eth_header), &netdev);
       break;
     }
     case ETH_P_IPV6:
@@ -36,12 +39,6 @@ void handle_eth_frame(eth_header *hdr, size_t len) {
     printf("  Length: %d\n", hdr->type_len);
   }
   fflush(stdout);
-}
-
-void handle_arp_packet(arp_header *hdr, size_t len) {
-  printf("  (%5zub): hrd=%s, len=%d\n", len, hdr->hrd_to_str().data(), hdr->ar_hln);
-  printf("            pro=%s, len=%d\n", hdr->pro_to_str().data(), hdr->ar_pln);
-  printf("            op =%s\n", hdr->op_to_str().data());
 }
 
 int main(int argc, char *argv[]) {
@@ -60,6 +57,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   printf("TAP interface configured\n");
+
+  netdev.ipv4_addr = sinet_addr("10.0.0.2");
 
   // Use the actual TAP device.
   while (1) {

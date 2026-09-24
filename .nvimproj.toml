@@ -4,3 +4,4 @@ clangd_cmd = [
   "clangd", "--background-index", "--query-driver=/nix/store/*/bin/*",
   "--path-mappings=/Users/pablo/OrbStack/netstack/nix=/nix",
 ]
+copilot=false

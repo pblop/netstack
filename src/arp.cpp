@@ -14,12 +14,12 @@ int AddressResolutionModule::handle_incoming_arp(eth_header *eth_hdr,
   fflush(stdout);
 
   // ?Do I have the hardware type in ar$hrd?
-  if (arp_hdr->hwtype != ARPHRD_ETHER)
+  if (arp_hdr->hwtype() != ARPHRD_ETHER)
     return -1; // i don't know this hw type
   // TODO: [optionally check the hardware length ar$hln]
 
   // ?Do I speak the protocol in ar$pro?
-  if (arp_hdr->protype != ETH_P_IP)
+  if (arp_hdr->protype() != ETH_P_IP)
     return -2; // i don't know the protocol
   // TODO: [optionally check the protocol length ar$pln]
 
@@ -38,7 +38,7 @@ int AddressResolutionModule::handle_incoming_arp(eth_header *eth_hdr,
   }
 
   // ?Am I the target protocol address?
-  if (arp_data->dip != netdev->ipv4_addr)
+  if (arp_data->dip != netdev->ipv4addr)
     return -3; // not my packet to handle
 
   // If Merge_flag is false, add the triplet <protocol type, sender protocol
@@ -47,7 +47,7 @@ int AddressResolutionModule::handle_incoming_arp(eth_header *eth_hdr,
     translation_table_ipv4[arp_data->sip] = std::to_array(arp_data->smac);
 
   // ?Is the opcode ares_op$REQUEST?  (NOW look at the opcode!!)
-  if (arp_hdr->opcode != ARPOP_REQUEST)
+  if (arp_hdr->opcode() != ARPOP_REQUEST)
     return -4; // not a request for me to handle.
 
   // Swap hardware and protocol fields, putting the local hardware and protocol
@@ -56,9 +56,11 @@ int AddressResolutionModule::handle_incoming_arp(eth_header *eth_hdr,
   std::swap(arp_data->smac, arp_data->dmac);
 
   // Set the ar$op field to ares_op$REPLY.
-  arp_hdr->opcode = ARPOP_REPLY;
+  arp_hdr->set_opcode(ARPOP_REPLY);
 
   // Send the packet to the (new) target hardware address on the same hardware
   // on which the request was received.
-
+  size_t payload_len = sizeof(arp_header) + sizeof(arp_ipv4);
+  netdev->transmit(eth_hdr, payload_len, ETH_P_ARP, arp_data->dmac);
+  return 0;
 }

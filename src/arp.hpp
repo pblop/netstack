@@ -8,12 +8,12 @@
 #include <netinet/in.h>
 #include <unordered_map>
 
-struct arp_header {
-  uint16_t hwtype;  // hardware address space
-  uint16_t protype; // protocol address space
-  uint8_t hwsize;   // byte length of each hardware address
-  uint8_t prosize;  // byte length of each protocol address
-  uint16_t opcode;  // opcode
+struct arp_header {  // arp header (network order)
+  uint16_t hwtype_;  // hardware address space
+  uint16_t protype_; // protocol address space
+  uint8_t hwsize;    // byte length of each hardware address
+  uint8_t prosize;   // byte length of each protocol address
+  uint16_t opcode_;  // opcode
   uint8_t data[];
 
   // a bunch other fields (ar_sha, ar_spa, ar_tha, ar_tpa) follow,
@@ -21,48 +21,53 @@ struct arp_header {
 
   static arp_header *from_buffer(uint8_t *buf) {
     auto *hdr = reinterpret_cast<arp_header *>(buf);
-    hdr->hwtype = ntohs(hdr->hwtype);
-    hdr->protype = ntohs(hdr->protype);
-    hdr->opcode = ntohs(hdr->opcode);
     return hdr;
   }
+
+  uint16_t hwtype() const { return ntohs(hwtype_); };
+  uint16_t protype() const { return ntohs(protype_); };
+  uint16_t opcode() const { return ntohs(opcode_); };
+  void set_hwtype(uint16_t v) { hwtype_ = htons(v); }
+  void set_protype(uint16_t v) { protype_ = htons(v); }
+  void set_opcode(uint16_t v) { opcode_ = htons(v); }
+
   std::array<char, 18> hrd_to_str() const {
-    switch (hwtype) {
+    switch (hwtype()) {
     case ARPHRD_ETHER:
       return {"ETHER"};
     default:
       std::array<char, 18> buf;
-      snprintf(buf.data(), sizeof(buf), "%d", hwtype);
+      snprintf(buf.data(), sizeof(buf), "%d", hwtype());
       return buf;
     }
   }
   std::array<char, 18> pro_to_str() const {
-    if (hwtype == ARPHRD_ETHER) {
-      switch (protype) {
+    if (hwtype() == ARPHRD_ETHER) {
+      switch (protype()) {
       case ETH_P_IP:
         return {"IPv4"};
       case ETH_P_IPV6:
         return {"IPv6"};
       default:
         std::array<char, 18> buf;
-        snprintf(buf.data(), sizeof(buf), "%d", hwtype);
+        snprintf(buf.data(), sizeof(buf), "%d", hwtype());
         return buf;
       }
     } else {
       std::array<char, 18> buf;
-      snprintf(buf.data(), sizeof(buf), "%d", hwtype);
+      snprintf(buf.data(), sizeof(buf), "%d", hwtype());
       return buf;
     }
   }
   std::array<char, 18> op_to_str() const {
-    switch (opcode) {
+    switch (opcode()) {
     case ARPOP_REQUEST:
       return {"REQUEST"};
     case ARPOP_REPLY:
       return {"REPLY"};
     default:
       std::array<char, 18> buf;
-      snprintf(buf.data(), sizeof(buf), "%d", hwtype);
+      snprintf(buf.data(), sizeof(buf), "%d", opcode());
       return buf;
     }
   }

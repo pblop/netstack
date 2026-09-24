@@ -22,7 +22,7 @@ void handle_eth_frame(eth_header *hdr, size_t len) {
 
   printf("(%5zu bytes) %s -> %s\n", len, src_str, dest_str);
   if (hdr->is_type()) {
-    switch (hdr->type_len) {
+    switch (hdr->type_len()) {
     case ETH_P_ARP: {
       printf("  Type: ARP\n");
       arp_module.handle_incoming_arp(hdr, len - sizeof(eth_header), &netdev);
@@ -32,11 +32,11 @@ void handle_eth_frame(eth_header *hdr, size_t len) {
       printf("  Type: IPv6\n");
       break;
     default:
-      printf("  Unknown type 0x%x\n", hdr->type_len);
+      printf("  Unknown type 0x%x\n", hdr->type_len());
       break;
     }
   } else {
-    printf("  Length: %d\n", hdr->type_len);
+    printf("  Length: %d\n", hdr->type_len());
   }
   fflush(stdout);
 }
@@ -58,18 +58,25 @@ int main(int argc, char *argv[]) {
   }
   printf("TAP interface configured\n");
 
-  netdev.ipv4_addr = sinet_addr("10.0.0.2");
+  netdev = netdevice {
+    .ipv4addr = sinet_addr("10.0.0.2"),
+    .hwaddr = {0,0,0,0,0,1},
+    .tap = &tap
+  };
 
   // Use the actual TAP device.
   while (1) {
-    int err;
+    int n;
+    // Header (14) + Payload (1500) is ETH_FRAME_LEN (1514)
     uint8_t buf[ETH_FRAME_LEN];
-
-    if ((err = tap.read(buf, sizeof(buf))) < 0) {
-      fprintf(stderr, "Error reading from TAP device: %d\n", err);
+    if ((n = tap.read(buf, sizeof(buf))) < 0) {
+      fprintf(stderr, "Error reading from TAP device: %d\n", n);
+      continue;
     }
-    auto *hdr = eth_header::from_buffer(buf);
-    handle_eth_frame(hdr, err);
+
+    // if we received less than an eth_header, we definitely read wrong.
+    if ((size_t)n < sizeof(eth_header)) continue;
+    handle_eth_frame(eth_header::from_buffer(buf), n);
   }
 
   tap.close();

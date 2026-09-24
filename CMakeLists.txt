@@ -5,7 +5,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(netstack)
-target_sources(netstack PRIVATE src/main.cpp src/tap.cpp src/ether.cpp src/arp.cpp
+target_sources(netstack PRIVATE src/main.cpp src/tap.cpp src/ether.cpp
+               src/arp.cpp src/netdevice.cpp
                PRIVATE FILE_SET HEADERS BASE_DIRS src FILES src/tap.hpp
                src/ether.hpp src/arp.hpp src/netdevice.hpp)
 

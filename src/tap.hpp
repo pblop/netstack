@@ -27,6 +27,5 @@ struct TapDevice {
   int close();
 };
 
-
 // s-afer inet_addr.
 in_addr_t sinet_addr(const char *ip_str);

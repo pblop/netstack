@@ -7,7 +7,7 @@
 #include "ether.hpp"
 #include "tap.hpp"
 
-void handle_eth_frame(eth_header* hdr, size_t len) {
+void handle_eth_frame(eth_header *hdr, size_t len) {
   char src_str[18], dest_str[18];
   hdr->saddr_to_str(src_str, sizeof(src_str));
   hdr->daddr_to_str(dest_str, sizeof(dest_str));
@@ -15,15 +15,15 @@ void handle_eth_frame(eth_header* hdr, size_t len) {
   printf("(%zu bytes) %s -> %s\n", len, src_str, dest_str);
   if (hdr->is_type()) {
     switch (hdr->type_len) {
-      case ETH_P_ARP:
-        printf("  Type: ARP\n");
-        break;
-      case ETH_P_IPV6:
-        printf("  Type: IPv6\n");
-        break;
-      default:
-        printf("  Unknown type 0x%x\n", hdr->type_len);
-        break;
+    case ETH_P_ARP:
+      printf("  Type: ARP\n");
+      break;
+    case ETH_P_IPV6:
+      printf("  Type: IPv6\n");
+      break;
+    default:
+      printf("  Unknown type 0x%x\n", hdr->type_len);
+      break;
     }
   } else {
     printf("  Length: %d\n", hdr->type_len);

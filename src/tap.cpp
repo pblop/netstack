@@ -14,7 +14,7 @@ int TapDevice::connect(char *ifname_in) {
   memset(&ifr, 0, sizeof(ifr));
   ifr.ifr_flags = IFF_TAP | IFF_NO_PI; // TAP device without packet information
   if (ifname_in != NULL) {
-    strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+    strncpy(ifr.ifr_name, ifname_in, IFNAMSIZ);
   }
 
   // Try to create the device.

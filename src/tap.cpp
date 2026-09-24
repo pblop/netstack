@@ -1,6 +1,6 @@
 #include "tap.hpp"
 
-int tuntap_connect(char *ifname, char *ifname_out) {
+int tap_connect(char *ifname, char *ifname_out) {
   int tuntap_fd;
   struct ifreq ifr;
 
@@ -165,4 +165,8 @@ in_addr_t sinet_addr(const char *ip_str) {
   }
 
   return addr.s_addr;
+}
+
+int tap_read(int fd, uint8_t *buf, size_t len) {
+
 }

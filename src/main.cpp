@@ -9,25 +9,24 @@ int main(int argc, char *argv[]) {
   char ifname[IFNAMSIZ];
 
   char *requested_ifname = argc > 1 ? argv[1] : NULL;
-
-  int tuntap_fd = tuntap_connect(requested_ifname, ifname);
-  if (tuntap_fd < 0) {
+  int tap_fd = tap_connect(requested_ifname, ifname);
+  if (tap_fd < 0) {
     fprintf(stderr, "Couldn't create TAP device\n");
     return 1;
   }
-  printf("TUN device name: %s\n", ifname);
+  printf("TAP device name: %s\n", ifname);
 
-  if (configure_iface(ifname, sinet_addr("192.168.234.2"),
-                      sinet_addr("255.255.255.0")) < 0) {
-    fprintf(stderr, "Couldn't configure the TUN interface.\n");
-    close(tuntap_fd);
-    return 1;
-  }
-  printf("TUN interface configured\n");
+  // if (configure_iface(ifname, sinet_addr("192.168.234.2"),
+  //                     sinet_addr("255.255.255.0")) < 0) {
+  //   fprintf(stderr, "Couldn't configure the TUN interface.\n");
+  //   close(tap_fd);
+  //   return 1;
+  // }
+  //printf("TAP interface configured\n");
 
-  // You can now use the TUN device (tun_fd) to read and write network packets.
+  // Use the actual TAP device.
 
-  close(tuntap_fd);
+  close(tap_fd);
 
   return 0;
 }

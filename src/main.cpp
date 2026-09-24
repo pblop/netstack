@@ -4,20 +4,27 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "arp.hpp"
 #include "ether.hpp"
 #include "tap.hpp"
+
+void handle_eth_frame(eth_header *hdr, size_t len);
+void handle_arp_packet(arp_header *hdr, size_t len);
 
 void handle_eth_frame(eth_header *hdr, size_t len) {
   char src_str[18], dest_str[18];
   hdr->saddr_to_str(src_str, sizeof(src_str));
   hdr->daddr_to_str(dest_str, sizeof(dest_str));
 
-  printf("(%zu bytes) %s -> %s\n", len, src_str, dest_str);
+  printf("(%5zu bytes) %s -> %s\n", len, src_str, dest_str);
   if (hdr->is_type()) {
     switch (hdr->type_len) {
-    case ETH_P_ARP:
+    case ETH_P_ARP: {
       printf("  Type: ARP\n");
+      auto *arp_hdr = arp_header::from_buffer(hdr->payload);
+      handle_arp_packet(arp_hdr, len - sizeof(eth_header));
       break;
+    }
     case ETH_P_IPV6:
       printf("  Type: IPv6\n");
       break;
@@ -29,6 +36,12 @@ void handle_eth_frame(eth_header *hdr, size_t len) {
     printf("  Length: %d\n", hdr->type_len);
   }
   fflush(stdout);
+}
+
+void handle_arp_packet(arp_header *hdr, size_t len) {
+  printf("  (%5zub): hrd=%s, len=%d\n", len, hdr->hrd_to_str().data(), hdr->ar_hln);
+  printf("            pro=%s, len=%d\n", hdr->pro_to_str().data(), hdr->ar_pln);
+  printf("            op =%s\n", hdr->op_to_str().data());
 }
 
 int main(int argc, char *argv[]) {

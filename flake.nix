@@ -11,6 +11,7 @@
           packages = with pkgs; [
             cmake ninja gdb clang-tools
             tcpdump iproute2 netcat-openbsd curl
+            arping net-tools
           ];
         };
       });

@@ -51,18 +51,16 @@ int main(int argc, char *argv[]) {
   }
   printf("TAP device name: %s\n", tap.ifname);
 
-  if (tap.up_iface() < 0) {
+  if (tap.configure_iface(sinet_addr("10.0.0.1"), sinet_addr("255.255.255.0")) < 0) {
     fprintf(stderr, "Couldn't bring the TAP interface up.\n");
     tap.close();
     return 1;
   }
   printf("TAP interface configured\n");
 
-  netdev = netdevice {
-    .ipv4addr = sinet_addr("10.0.0.2"),
-    .hwaddr = {0,0,0,0,0,1},
-    .tap = &tap
-  };
+  netdev = netdevice{.ipv4addr = sinet_addr("10.0.0.2"),
+                     .hwaddr = {0, 0, 0, 0, 0, 1},
+                     .tap = &tap};
 
   // Use the actual TAP device.
   while (1) {
@@ -75,7 +73,8 @@ int main(int argc, char *argv[]) {
     }
 
     // if we received less than an eth_header, we definitely read wrong.
-    if ((size_t)n < sizeof(eth_header)) continue;
+    if ((size_t)n < sizeof(eth_header))
+      continue;
     handle_eth_frame(eth_header::from_buffer(buf), n);
   }
 

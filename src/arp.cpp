@@ -56,7 +56,10 @@ int AddressResolutionModule::handle_incoming_arp(eth_header *eth_hdr,
                                 // misaligned (the arp_header struct is packed).
   arp_data->sip = arp_data->dip;
   arp_data->dip = tmp;
+  // DMAC of the incoming packet can be ff:ff:ff:ff:..., but we need to set SMAC
+  // correctly.
   std::swap(arp_data->smac, arp_data->dmac);
+  memcpy(arp_data->smac, netdev->hwaddr, sizeof(arp_data->smac));
 
   // Set the ar$op field to ares_op$REPLY.
   arp_hdr->set_opcode(ARPOP_REPLY);
@@ -64,6 +67,5 @@ int AddressResolutionModule::handle_incoming_arp(eth_header *eth_hdr,
   // Send the packet to the (new) target hardware address on the same hardware
   // on which the request was received.
   size_t payload_len = sizeof(arp_header) + sizeof(arp_ipv4);
-  netdev->transmit(eth_hdr, payload_len, ETH_P_ARP, arp_data->dmac);
-  return 0;
+  return netdev->transmit(eth_hdr, payload_len, ETH_P_ARP, arp_data->dmac);
 }

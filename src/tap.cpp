@@ -213,6 +213,15 @@ int TapDevice::read(uint8_t *buf, size_t len) {
   return bytes_read;
 }
 
+int TapDevice::write(uint8_t *buf, size_t len) {
+  int bytes_written = ::write(fd, buf, len);
+  if (bytes_written < 0) {
+    perror("Failed to write to TAP device");
+    return -1;
+  }
+  return bytes_written;
+}
+
 int TapDevice::close() {
   if (fd >= 0) {
     int ret = ::close(fd);

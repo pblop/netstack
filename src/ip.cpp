@@ -25,13 +25,16 @@ uint16_t ip_checksum(const void *data, size_t len) {
     sum += word;
   }
 
-  // I believe this \/ doesn't give correct results on a big endian machine...
-  // TODO: fix this.
   /*  Add left-over byte, if any */
   if (len % 2 == 1) {
     // This is the original code
     //sum += * (unsigned char *) addr;
-    sum += *reinterpret_cast<const unsigned char *>(bytes+len-1);
+    uint16_t byte = *reinterpret_cast<const unsigned char *>(bytes+len-1);
+    // This fixes the results on a big endian machine, I think.
+    #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    byte <<= 8;
+    #endif
+    sum += byte;
   }
 
   /*  Fold 32-bit sum to 16 bits */

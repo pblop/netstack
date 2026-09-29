@@ -25,3 +25,5 @@ struct ip_header { // network order
   void update_checksum() { check = 0; check = calc_checksum(); }
   bool checksum_ok() const { return calc_checksum() == 0; }
 } __attribute__((packed));
+
+uint16_t ip_checksum(const void *data, size_t len);

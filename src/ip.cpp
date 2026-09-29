@@ -25,6 +25,8 @@ uint16_t ip_checksum(const void *data, size_t len) {
     sum += word;
   }
 
+  // I believe this \/ doesn't give correct results on a big endian machine...
+  // TODO: fix this.
   /*  Add left-over byte, if any */
   if (len % 2 == 1) {
     // This is the original code

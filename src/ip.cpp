@@ -66,8 +66,7 @@ int IpModule::handle_incoming_ip(eth_header *eth_hdr, size_t len,
   auto *ip_hdr = ip_header::from_buffer(eth_hdr->payload);
 
   printf("  (%5zub):  src=%s, dst=%s\n", len, 
-         inet_ntoa(static_cast<struct in_addr>(ip_hdr->saddr)), 
-         inet_ntoa(static_cast<struct in_addr>(ip_hdr->daddr)));
+         inet_ntoy(ip_hdr->saddr).data(), inet_ntoy(ip_hdr->daddr).data());
   fflush(stdout);
 
   // text from rfc1122

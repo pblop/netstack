@@ -1,6 +1,7 @@
 #pragma once
 
 #include "netdevice.hpp"
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -37,3 +38,9 @@ uint16_t ip_checksum(const void *data, size_t len);
 struct IpModule {
   int handle_incoming_ip(eth_header *eth_hdr, size_t len, netdevice *netdev);
 };
+
+constexpr std::array<char, INET_ADDRSTRLEN> inet_ntoy(uint32_t addr) {
+  std::array<char, INET_ADDRSTRLEN> str{};
+  inet_ntop(AF_INET, &addr, str.data(), str.size());
+  return str;
+}

@@ -1,5 +1,7 @@
 #include "ip.hpp"
 #include "ether.hpp"
+#include "icmp.hpp"
+#include <cassert>
 #include <cstring>
 #include <memory>
 #include <netinet/in.h>
@@ -73,6 +75,8 @@ int IpModule::handle_incoming_ip(eth_header *eth_hdr, size_t len,
   // verifies that the datagram is correctly formatted;
   if (ip_hdr->version != 4) return 1;
   if (!ip_hdr->checksum_ok()) return 2;
+  if (ip_hdr->tot_len() != len) return 3; // ensure the actual and specified len 
+                                          // are the same.
 
   // verifies that it is destined to the local host;
   // A host MUST silently discard an incoming datagram that is not destined for
@@ -89,9 +93,8 @@ int IpModule::handle_incoming_ip(eth_header *eth_hdr, size_t len,
       // no network broadcast (f)
       // (3) the address for a multicast group of which the host is a member on
       // the incoming physical interface. # TODO: no IGMP (yet)
-    return 3;
+    return 4;
 
-  // fragmentation/reassembly not supported as of yet.
   // TODO: id is ignored as of yet.
   // TODO: tos is ignored as of yet.
 
@@ -101,8 +104,18 @@ int IpModule::handle_incoming_ip(eth_header *eth_hdr, size_t len,
   // reassembles the datagram if necessary; and
   // passes the encapsulated message to the appropriate transport-layer protocol
   // module.
-  
-  printf("Received ipv4");
+  // TODO: fragmentation/reassembly not supported as of yet.
+
+
+  switch (ip_hdr->protocol) {
+    case IPPROTO_ICMP: 
+      printf("    Proto: ICMP\n");
+      handle_incoming_icmp(ip_hdr, ip_hdr->payload_len(), netdev);
+      break;
+    default:
+      printf("    Unknown proto 0x%x\n", ip_hdr->protocol);
+      break;
+  }
 
   return 0;
 }

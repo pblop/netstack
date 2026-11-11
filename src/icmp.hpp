@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ip.hpp"
+#include "netdevice.hpp"
 #include <cstddef>
 #include <cstdint>
 
@@ -25,11 +27,17 @@ struct icmp_header { // icmp header (network order)
     auto *hdr = reinterpret_cast<icmp_header *>(buf);
     return hdr;
   }
+  static const icmp_header *from_buffer(const void *buf) {
+    auto *hdr = reinterpret_cast<const icmp_header *>(buf);
+    return hdr;
+  }
 
   uint16_t calc_checksum(size_t len) const;
   void update_checksum(size_t len);
   bool checksum_ok(size_t len) const { return calc_checksum(len) == 0; }
 } __attribute__((packed));
+
+int handle_incoming_icmp(const ip_header *ip_hdr, size_t len, const netdevice *netdev);
 
 #include <type_traits>
 // ensure the icmp header has the correct size.

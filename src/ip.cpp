@@ -81,8 +81,8 @@ int IpModule::handle_incoming_ip(eth_header *eth_hdr, size_t len,
   if (ip_hdr->daddr != netdev->ipv4addr && // (1) (one of) the host's IP address(es)
       // (2) an IP broadcast address valid for the connected network \/
       // (a) this host on this network <- i believe i shouldn't answer that
-      ip_hdr->daddr != ipv4host(netdev->ipv4addr, netdev->ipv4mask) && // (b)
-      // (b) specified host in network
+      // (b) specified host in network <- rfc1700 says this should only be a
+      // source address (page 4).
       ip_hdr->daddr != 0xffffffff &&       // (c) limited broadcast
       // no network broadcast (d). we don't do classed addresses 🙅‍♀️
       ip_hdr->daddr != netdev->ipv4addr)   // (e) subnet broadcast

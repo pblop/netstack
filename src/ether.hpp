@@ -35,7 +35,7 @@ struct eth_header { // ethernet header (network order)
     eth_addr_to_str(daddr, str, str_size);
   }
   void saddr_to_str(char *str, size_t str_size) const {
-    eth_addr_to_str(daddr, str, str_size);
+    eth_addr_to_str(saddr, str, str_size);
   }
 } __attribute__((packed)); // tell clang to not add padding to the struct, so it
                            // matches the actual ethernet header layout in

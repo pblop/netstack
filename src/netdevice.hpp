@@ -6,6 +6,7 @@
 
 struct netdevice {
   uint32_t ipv4addr;
+  uint32_t ipv4mask;
   uint8_t hwaddr[6];
   TapDevice *tap;
 

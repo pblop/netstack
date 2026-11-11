@@ -1,5 +1,6 @@
 #pragma once
 
+#include "netdevice.hpp"
 #include <cstddef>
 #include <cstdint>
 
@@ -21,9 +22,18 @@ struct ip_header { // network order
   uint32_t saddr;
   uint32_t daddr;
 
+  static ip_header *from_buffer(uint8_t *buf) {
+    auto *hdr = reinterpret_cast<ip_header *>(buf);
+    return hdr;
+  }
+
   uint16_t calc_checksum() const;
   void update_checksum() { check = 0; check = calc_checksum(); }
   bool checksum_ok() const { return calc_checksum() == 0; }
 } __attribute__((packed));
 
 uint16_t ip_checksum(const void *data, size_t len);
+
+struct IpModule {
+  int handle_incoming_ip(eth_header *eth_hdr, size_t len, netdevice *netdev);
+};

@@ -6,6 +6,7 @@
 
 #include "arp.hpp"
 #include "ether.hpp"
+#include "ip.hpp"
 #include "netdevice.hpp"
 #include "tap.hpp"
 
@@ -13,6 +14,7 @@ void handle_eth_frame(eth_header *hdr, size_t len);
 void handle_arp_packet(arp_header *hdr, size_t len);
 
 AddressResolutionModule arp_module;
+IpModule ip_module;
 netdevice netdev;
 
 void handle_eth_frame(eth_header *hdr, size_t len) {
@@ -23,9 +25,14 @@ void handle_eth_frame(eth_header *hdr, size_t len) {
   printf("(%5zu bytes) %s -> %s\n", len, src_str, dest_str);
   if (hdr->is_type()) {
     switch (hdr->type_len()) {
-    case ETH_P_ARP: {
+    case ETH_P_ARP:
       printf("  Type: ARP\n");
       arp_module.handle_incoming_arp(hdr, len - sizeof(eth_header), &netdev);
+      break;
+    case ETH_P_IP: {
+      printf("  Type: IPv4\n");
+      int ret = ip_module.handle_incoming_ip(hdr, len - sizeof(eth_header), &netdev);
+      printf("  ipv4 handler ret: %d\n", ret);
       break;
     }
     case ETH_P_IPV6:
@@ -59,6 +66,7 @@ int main(int argc, char *argv[]) {
   printf("TAP interface configured\n");
 
   netdev = netdevice{.ipv4addr = sinet_addr("10.0.0.2"),
+                     .ipv4mask = sinet_addr("255.255.255.0"),
                      .hwaddr = {0, 0, 0, 0, 0, 1},
                      .tap = &tap};
 

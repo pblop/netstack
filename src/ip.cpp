@@ -1,5 +1,8 @@
 #include "ip.hpp"
+#include "ether.hpp"
 #include <cstring>
+#include <memory>
+#include <netinet/in.h>
 
 uint16_t ip_checksum(const void *data, size_t len) {
   // Compute Internet Checksum for "count" bytes beginning at location "addr".
@@ -47,4 +50,60 @@ uint16_t ip_checksum(const void *data, size_t len) {
 uint16_t ip_header::calc_checksum() const {
   size_t count = ihl * 4; // 32-bit words are 4 bytes
   return ip_checksum(this, count);
+}
+
+constexpr uint32_t ipv4host(const uint32_t ipv4addr, const uint32_t ipv4mask) {
+  return ipv4addr & ~ipv4mask;
+}
+
+int IpModule::handle_incoming_ip(eth_header *eth_hdr, size_t len,
+                                 netdevice *netdev) {
+  // return values:
+  // = 0 - ok
+  // > 0 - silently discard
+  // < 0 - send icmp.
+  
+  auto *ip_hdr = ip_header::from_buffer(eth_hdr->payload);
+
+  printf("  (%5zub):  src=%s, dst=%s\n", len, 
+         inet_ntoa(static_cast<struct in_addr>(ip_hdr->saddr)), 
+         inet_ntoa(static_cast<struct in_addr>(ip_hdr->daddr)));
+  fflush(stdout);
+
+  // text from rfc1122
+  // verifies that the datagram is correctly formatted;
+  if (ip_hdr->version != 4) return 1;
+  if (!ip_hdr->checksum_ok()) return 2;
+
+  // verifies that it is destined to the local host;
+  // A host MUST silently discard an incoming datagram that is not destined for
+  // the host.  An incoming datagram is destined for the host if the datagram's
+  // destination address field is:
+  if (ip_hdr->daddr != netdev->ipv4addr && // (1) (one of) the host's IP address(es)
+      // (2) an IP broadcast address valid for the connected network \/
+      // (a) this host on this network <- i believe i shouldn't answer that
+      ip_hdr->daddr != ipv4host(netdev->ipv4addr, netdev->ipv4mask) && // (b)
+      // (b) specified host in network
+      ip_hdr->daddr != 0xffffffff &&       // (c) limited broadcast
+      // no network broadcast (d). we don't do classed addresses 🙅‍♀️
+      ip_hdr->daddr != netdev->ipv4addr)   // (e) subnet broadcast
+      // no network broadcast (f)
+      // (3) the address for a multicast group of which the host is a member on
+      // the incoming physical interface. # TODO: no IGMP (yet)
+    return 3;
+
+  // fragmentation/reassembly not supported as of yet.
+  // TODO: id is ignored as of yet.
+  // TODO: tos is ignored as of yet.
+
+  // processes options;
+  // TODO: options are ignored as of yet.
+
+  // reassembles the datagram if necessary; and
+  // passes the encapsulated message to the appropriate transport-layer protocol
+  // module.
+  
+  printf("Received ipv4");
+
+  return 0;
 }

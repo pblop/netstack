@@ -131,6 +131,7 @@ int IpModule::send_ip(uint32_t daddr, uint8_t proto, void *payload,
   size_t ip_len = sizeof(ip_header) + payload_len;
 
   ip_hdr->ihl = 5; // no options for now.
+  ip_hdr->version = 4;
   ip_hdr->tos = 0;
   ip_hdr->set_tot_len(sizeof(ip_header) + payload_len);
   ip_hdr->set_id(id++); // this wraps around automatically.

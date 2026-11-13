@@ -2,9 +2,7 @@
 #include "ether.hpp"
 #include "icmp.hpp"
 #include <cassert>
-#include <cerrno>
 #include <cstring>
-#include <memory>
 #include <netinet/in.h>
 
 uint16_t ip_checksum(const void *data, size_t len) {
@@ -125,7 +123,7 @@ int IpModule::send_ip(uint32_t daddr, uint8_t proto, void *payload,
   // Create the IP packet. A full ethernet+ip packet has a max size, so all of
   // this can be created in the stack.
   static constexpr size_t HEADERSIZE = sizeof(eth_header) + sizeof(ip_header);
-  if (payload_len > ETH_FRAME_LEN - HEADERSIZE) return 1;
+  if (payload_len > ETH_FRAME_LEN - HEADERSIZE) return -1;
 
   uint8_t buf[ETH_FRAME_LEN];
   auto *eth_hdr = eth_header::from_buffer(buf);
@@ -140,7 +138,10 @@ int IpModule::send_ip(uint32_t daddr, uint8_t proto, void *payload,
 
   // A host MUST NOT send a datagram with a Time-to-Live (TTL)
   // value of zero.
-  if (ttl == 0) return 2;
+  if (ttl == 0) {
+    fprintf(stderr, "TTL was 0 when sending IP packet\n");
+    return -2;
+  }
   ip_hdr->ttl = ttl;
 
   ip_hdr->protocol = proto;
@@ -151,12 +152,12 @@ int IpModule::send_ip(uint32_t daddr, uint8_t proto, void *payload,
   ip_hdr->saddr = dev->ipv4addr;
   ip_hdr->update_checksum();
 
-  if (memcpy(ip_hdr->payload(), payload, payload_len) != 0) return 2;
+  memcpy(ip_hdr->payload(), payload, payload_len);
 
   if (!arp->translation_table_ipv4.contains(daddr)) {
-    fprintf(stderr, "ARP table doesn't have hw addr for %s",
+    fprintf(stderr, "ARP table doesn't have hw addr for %s\n",
             inet_ntoy(daddr).data());
-    return 3;
+    return -4;
   }
 
   std::array<uint8_t, 6> hw_addr = arp->translation_table_ipv4.at(daddr);

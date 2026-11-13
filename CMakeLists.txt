@@ -26,7 +26,9 @@ if(BUILD_TESTING)
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(googletest)
 
-  add_executable(netstack_tests tests/ip_checksum.cpp src/ip.cpp src/icmp.cpp)
+  add_executable(netstack_tests 
+    tests/ip_checksum.cpp src/ip.cpp src/icmp.cpp src/netdevice.cpp src/tap.cpp
+  )
   target_include_directories(netstack_tests PRIVATE src)
   target_link_libraries(netstack_tests PRIVATE GTest::gtest_main)
   # fno-sanitize-recover tells ubsan to fail if it found ub.

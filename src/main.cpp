@@ -69,6 +69,8 @@ int main(int argc, char *argv[]) {
                      .ipv4mask = sinet_addr("255.255.255.0"),
                      .hwaddr = {0, 0, 0, 0, 0, 1},
                      .tap = &tap};
+  ip_module.devices.push_back(&netdev);
+  ip_module.arp = &arp_module;
 
   // Use the actual TAP device.
   while (1) {

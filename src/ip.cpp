@@ -2,6 +2,7 @@
 #include "ether.hpp"
 #include "icmp.hpp"
 #include <cassert>
+#include <cerrno>
 #include <cstring>
 #include <memory>
 #include <netinet/in.h>
@@ -50,8 +51,7 @@ uint16_t ip_checksum(const void *data, size_t len) {
 }
 
 uint16_t ip_header::calc_checksum() const {
-  size_t count = ihl * 4; // 32-bit words are 4 bytes
-  return ip_checksum(this, count);
+  return ip_checksum(this, header_len());
 }
 
 constexpr uint32_t ipv4host(const uint32_t ipv4addr, const uint32_t ipv4mask) {
@@ -110,7 +110,7 @@ int IpModule::handle_incoming_ip(eth_header *eth_hdr, size_t len,
   switch (ip_hdr->protocol) {
     case IPPROTO_ICMP: 
       printf("    Proto: ICMP\n");
-      handle_incoming_icmp(ip_hdr, ip_hdr->payload_len(), netdev);
+      handle_incoming_icmp(ip_hdr, ip_hdr->payload_len(), netdev, this);
       break;
     default:
       printf("    Unknown proto 0x%x\n", ip_hdr->protocol);
@@ -118,4 +118,47 @@ int IpModule::handle_incoming_ip(eth_header *eth_hdr, size_t len,
   }
 
   return 0;
+}
+
+int IpModule::send_ip(uint32_t daddr, uint8_t proto, void *payload,
+                      size_t payload_len, uint8_t ttl, uint32_t saddr) {
+  // Create the IP packet. A full ethernet+ip packet has a max size, so all of
+  // this can be created in the stack.
+  static constexpr size_t HEADERSIZE = sizeof(eth_header) + sizeof(ip_header);
+  if (payload_len > ETH_FRAME_LEN - HEADERSIZE) return 1;
+
+  uint8_t buf[ETH_FRAME_LEN];
+  auto *eth_hdr = eth_header::from_buffer(buf);
+  auto *ip_hdr  = ip_header::from_buffer(eth_hdr->payload);
+  size_t ip_len = sizeof(ip_header) + payload_len;
+
+  ip_hdr->ihl = 5; // no options for now.
+  ip_hdr->tos = 0;
+  ip_hdr->set_tot_len(sizeof(ip_header) + payload_len);
+  ip_hdr->set_id(id++); // this wraps around automatically.
+  ip_hdr->frag_off = 0;
+
+  // A host MUST NOT send a datagram with a Time-to-Live (TTL)
+  // value of zero.
+  if (ttl == 0) return 2;
+  ip_hdr->ttl = ttl;
+
+  ip_hdr->protocol = proto;
+  ip_hdr->daddr = daddr;
+
+  // Get which network device is responsible for this IP address.
+  auto dev = route(daddr);
+  ip_hdr->saddr = dev->ipv4addr;
+  ip_hdr->update_checksum();
+
+  if (memcpy(ip_hdr->payload(), payload, payload_len) != 0) return 2;
+
+  if (!arp->translation_table_ipv4.contains(daddr)) {
+    fprintf(stderr, "ARP table doesn't have hw addr for %s",
+            inet_ntoy(daddr).data());
+    return 3;
+  }
+
+  std::array<uint8_t, 6> hw_addr = arp->translation_table_ipv4.at(daddr);
+  return dev->transmit(eth_hdr, ip_len, ETH_P_IP, hw_addr.data());
 }

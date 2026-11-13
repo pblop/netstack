@@ -1,9 +1,11 @@
 #pragma once
 
+#include "arp.hpp"
 #include "netdevice.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 struct ip_header { // network order
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -15,7 +17,7 @@ struct ip_header { // network order
 #endif
   uint8_t tos;
   uint16_t tot_len_;
-  uint16_t id;
+  uint16_t id_;
   uint16_t frag_off; // flags (3 bits) + fragment offset (13 bits)
   uint8_t ttl;
   uint8_t protocol;
@@ -33,9 +35,14 @@ struct ip_header { // network order
   bool checksum_ok() const { return calc_checksum() == 0; }
 
   uint16_t tot_len() const { return ntohs(tot_len_); }
+  void set_tot_len(uint16_t tot_len) { tot_len_ =  htons(tot_len); }
 
-  // ihl but in bytes.
+  uint16_t id() const { return ntohs(id_); }
+  void set_id(uint16_t id) { id_ =  htons(id); }
+
+  // ihl but in bytes (32-bit words are 4 bytes)
   size_t header_len() const { return ihl * 4; }
+
   // options + padding (which is empty when ihl == 5)
   uint8_t *options() {
     return reinterpret_cast<uint8_t *>(this) + sizeof(ip_header); 
@@ -52,7 +59,15 @@ struct ip_header { // network order
 uint16_t ip_checksum(const void *data, size_t len);
 
 struct IpModule {
+  std::vector<netdevice*> devices;
+  AddressResolutionModule *arp = nullptr;
+  uint16_t id = 0;
+
+  netdevice *route(uint32_t daddr) { return devices[0]; }
+
   int handle_incoming_ip(eth_header *eth_hdr, size_t len, netdevice *netdev);
+  int send_ip(uint32_t daddr, uint8_t proto, void *payload, size_t payload_len,
+              uint8_t ttl = 64, uint32_t saddr = 0);
 };
 
 constexpr std::array<char, INET_ADDRSTRLEN> inet_ntoy(uint32_t addr) {

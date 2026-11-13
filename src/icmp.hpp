@@ -37,7 +37,8 @@ struct icmp_header { // icmp header (network order)
   bool checksum_ok(size_t len) const { return calc_checksum(len) == 0; }
 } __attribute__((packed));
 
-int handle_incoming_icmp(const ip_header *ip_hdr, size_t len, const netdevice *netdev);
+int handle_incoming_icmp(ip_header *ip_hdr, size_t len, netdevice *netdev,
+                         IpModule *ipm);
 
 #include <type_traits>
 // ensure the icmp header has the correct size.
